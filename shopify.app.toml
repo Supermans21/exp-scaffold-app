@@ -1,6 +1,5 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
-client_id = "5430497d8dd544f37f3d8a014d7c8b4e"
 name = "exp-scaffold-app"
 application_url = "https://shopify.dev/apps/default-app-home"
 embedded = true
