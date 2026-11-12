@@ -5,7 +5,9 @@
   "scripts": {
     "build": "cross-env NODE_OPTIONS=--no-experimental-require-module react-router build",
     "dev": "cross-env NODE_OPTIONS=--no-experimental-require-module shopify app dev --store qr-oman-dev.myshopify.com",
+    "dev:any": "cross-env NODE_OPTIONS=--no-experimental-require-module shopify app dev",
     "dev:local": "cross-env NODE_OPTIONS=--no-experimental-require-module shopify app dev --store qr-oman-dev.myshopify.com --use-localhost",
+    "dev:local:any": "cross-env NODE_OPTIONS=--no-experimental-require-module shopify app dev --use-localhost",
     "config:link": "shopify app config link",
     "generate": "shopify app generate",
     "deploy": "shopify app deploy",
