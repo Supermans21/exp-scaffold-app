@@ -3,4 +3,4 @@ roles = ["frontend", "backend"]
 webhooks_path = "/webhooks"
 
 [commands]
-dev = "npx prisma generate && npx prisma migrate deploy && npm exec react-router dev"
+dev = "cross-env NODE_OPTIONS=--no-experimental-require-module npx prisma generate && cross-env NODE_OPTIONS=--no-experimental-require-module npx prisma migrate deploy && cross-env NODE_OPTIONS=--no-experimental-require-module npm exec react-router dev"
