@@ -174,7 +174,9 @@ export async function saveQRCode(handle, data, graphql) {
           fields: [
             { key: "title", value: data.title },
             { key: "product", value: data.productId },
-            { key: "product_variant", value: data.productVariantId },
+            ...(data.productVariantId
+              ? [{ key: "product_variant", value: data.productVariantId }]
+              : []),
             { key: "destination", value: data.destination },
           ],
         },

@@ -6,6 +6,7 @@ import {
   useNavigation,
   useNavigate,
   useParams,
+  data,
 } from "react-router";
 import { authenticate } from "../shopify.server";
 import { boundary } from "@shopify/shopify-app-react-router/server";
@@ -42,30 +43,25 @@ export async function action({ request, params }) {
   const { session, admin, redirect } = await authenticate.admin(request);
 
   /** @type {any} */
-  const data = {
+  const formDataObj = {
     ...Object.fromEntries(await request.formData()),
   };
 
-  if (data.action === "delete") {
-    await deleteQRCode(data.metaobjectId, admin.graphql);
+  if (formDataObj.action === "delete") {
+    await deleteQRCode(formDataObj.metaobjectId, admin.graphql);
     return redirect("/app");
   }
 
-  const errors = validateQRCode(data);
+  const errors = validateQRCode(formDataObj);
 
   if (errors) {
-    return new Response(JSON.stringify({ errors }), {
-      status: 422,
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
+    return data({ errors }, { status: 422 });
   }
 
   const handle =
-    params.id === "new" ? generateHandle(data.title) : params.id;
+    params.id === "new" ? generateHandle(formDataObj.title) : params.id;
 
-  const metaobject = await saveQRCode(handle, data, admin.graphql);
+  const metaobject = await saveQRCode(handle, formDataObj, admin.graphql);
 
   return redirect(`/app/qrcodes/${metaobject.handle}`);
 }
