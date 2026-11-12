@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useLoaderData } from "react-router";
+import { useLoaderData, Link } from "react-router";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import JSZip from "jszip";
 
@@ -13,6 +13,7 @@ export async function loader({ request }) {
 
   return {
     qrCodes,
+    shop: session.shop,
   };
 }
 // [END loader]
@@ -57,10 +58,11 @@ function truncate(str, { length = 25 } = {}) {
 }
 
 export default function Index() {
-  const { qrCodes } = useLoaderData();
+  const { qrCodes, shop } = useLoaderData();
 
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState("");
+  const [activeTab, setActiveTab] = useState("all"); // 'all' | 'cart' | 'product' | 'discount'
   const [destinationFilter, setDestinationFilter] = useState("all");
   const [discountFilter, setDiscountFilter] = useState("all");
   const [sortBy, setSortBy] = useState("newest");
@@ -69,6 +71,34 @@ export default function Index() {
   const [selectedHandles, setSelectedHandles] = useState([]);
   const [isExporting, setIsExporting] = useState(false);
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
+
+  // Quick tab counts
+  const tabCounts = useMemo(() => {
+    return {
+      all: qrCodes.length,
+      cart: qrCodes.filter((qr) => qr.destination === "cart").length,
+      product: qrCodes.filter((qr) => qr.destination === "product").length,
+      discount: qrCodes.filter((qr) => qr.discountCode && qr.discountCode.trim()).length,
+    };
+  }, [qrCodes]);
+
+  // Handle Quick Tab Change
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    if (tab === "all") {
+      setDestinationFilter("all");
+      setDiscountFilter("all");
+    } else if (tab === "cart") {
+      setDestinationFilter("cart");
+      setDiscountFilter("all");
+    } else if (tab === "product") {
+      setDestinationFilter("product");
+      setDiscountFilter("all");
+    } else if (tab === "discount") {
+      setDestinationFilter("all");
+      setDiscountFilter("with_discount");
+    }
+  };
 
   // Filter & Sort Logic
   const filteredQRCodes = useMemo(() => {
@@ -79,7 +109,8 @@ export default function Index() {
           const q = searchQuery.toLowerCase();
           const matchTitle = qr.title?.toLowerCase().includes(q);
           const matchProduct = qr.productTitle?.toLowerCase().includes(q);
-          if (!matchTitle && !matchProduct) return false;
+          const matchDiscount = qr.discountCode?.toLowerCase().includes(q);
+          if (!matchTitle && !matchProduct && !matchDiscount) return false;
         }
 
         // Filter by destination
@@ -89,9 +120,9 @@ export default function Index() {
 
         // Filter by discount code presence
         if (discountFilter === "with_discount") {
-          if (!qr.discountCode) return false;
+          if (!qr.discountCode || !qr.discountCode.trim()) return false;
         } else if (discountFilter === "no_discount") {
-          if (qr.discountCode) return false;
+          if (qr.discountCode && qr.discountCode.trim()) return false;
         }
 
         return true;
@@ -172,6 +203,18 @@ export default function Index() {
     }
   };
 
+  // Download Single PNG
+  const handleDownloadSinglePng = (qr) => {
+    if (!qr.image) return;
+    const link = document.createElement("a");
+    link.href = qr.image;
+    const fileName = `${qr.title ? qr.title.replace(/[^a-z0-9_-]/gi, "_") : qr.handle}.png`;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   // Trigger Native Print Dialog
   const handlePrint = () => {
     window.print();
@@ -179,10 +222,17 @@ export default function Index() {
 
   const clearFilters = () => {
     setSearchQuery("");
+    setActiveTab("all");
     setDestinationFilter("all");
     setDiscountFilter("all");
     setSortBy("newest");
   };
+
+  const hasActiveFilters =
+    searchQuery.trim() !== "" ||
+    destinationFilter !== "all" ||
+    discountFilter !== "all" ||
+    sortBy !== "newest";
 
   if (qrCodes.length === 0) {
     return (
@@ -201,188 +251,374 @@ export default function Index() {
         Create QR code
       </s-button>
 
-      {/* [START Filters & Search Card] */}
-      <s-section>
-        <s-stack gap="base">
-          <s-stack direction="inline" gap="base" alignItems="center">
-            <s-box style={{ flex: 2, minWidth: "220px" }}>
-              <s-text-field
-                placeholder="Search by title or product name..."
-                value={searchQuery}
-                onInput={(e) => setSearchQuery(e.target.value)}
-                autoComplete="off"
-              ></s-text-field>
-            </s-box>
+      {/* [START Polaris Custom Table & Filter Card] */}
+      <div className="polaris-card">
+        {/* Quick Views / Segmented Tabs */}
+        <div className="polaris-tabs-bar">
+          <button
+            type="button"
+            className={`polaris-tab-item ${activeTab === "all" ? "active" : ""}`}
+            onClick={() => handleTabChange("all")}
+          >
+            All
+            <span className="tab-badge">{tabCounts.all}</span>
+          </button>
+          <button
+            type="button"
+            className={`polaris-tab-item ${activeTab === "cart" ? "active" : ""}`}
+            onClick={() => handleTabChange("cart")}
+          >
+            Cart Checkout
+            <span className="tab-badge">{tabCounts.cart}</span>
+          </button>
+          <button
+            type="button"
+            className={`polaris-tab-item ${activeTab === "product" ? "active" : ""}`}
+            onClick={() => handleTabChange("product")}
+          >
+            Product Page
+            <span className="tab-badge">{tabCounts.product}</span>
+          </button>
+          <button
+            type="button"
+            className={`polaris-tab-item ${activeTab === "discount" ? "active" : ""}`}
+            onClick={() => handleTabChange("discount")}
+          >
+            🏷️ With Discount
+            <span className="tab-badge">{tabCounts.discount}</span>
+          </button>
+        </div>
 
-            <s-box style={{ flex: 1, minWidth: "150px" }}>
-              <s-select
-                label="Destination"
-                labelHidden
-                value={destinationFilter}
-                onChange={(e) => setDestinationFilter(e.target.value)}
+        {/* Filter Controls Bar */}
+        <div className="filter-controls-row">
+          {/* Search Box */}
+          <div className="search-input-wrapper">
+            <svg
+              className="search-icon"
+              viewBox="0 0 20 20"
+              focusable="false"
+              aria-hidden="true"
+            >
+              <path
+                fillRule="evenodd"
+                d="M14.293 13.293a6 6 0 1 0-1.414 1.414l3.707 3.707a1 1 0 0 0 1.414-1.414l-3.707-3.707zm-5.293 1.707a5 5 0 1 1 0-10 5 5 0 0 1 0 10z"
+              />
+            </svg>
+            <input
+              type="text"
+              className="search-input"
+              placeholder="Search by title, product or discount..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                className="search-clear-btn"
+                onClick={() => setSearchQuery("")}
+                title="Clear search"
               >
-                <s-option value="all">All Destinations</s-option>
-                <s-option value="product">Product page</s-option>
-                <s-option value="cart">Cart / Checkout</s-option>
-              </s-select>
-            </s-box>
+                ✕
+              </button>
+            )}
+          </div>
 
-            <s-box style={{ flex: 1, minWidth: "150px" }}>
-              <s-select
-                label="Discount"
-                labelHidden
-                value={discountFilter}
-                onChange={(e) => setDiscountFilter(e.target.value)}
-              >
-                <s-option value="all">All Discounts</s-option>
-                <s-option value="with_discount">With Discount Code</s-option>
-                <s-option value="no_discount">Without Discount</s-option>
-              </s-select>
-            </s-box>
-
-            <s-box style={{ flex: 1, minWidth: "150px" }}>
-              <s-select
-                label="Sort By"
-                labelHidden
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-              >
-                <s-option value="newest">Newest first</s-option>
-                <s-option value="oldest">Oldest first</s-option>
-                <s-option value="scans_desc">Most scans</s-option>
-                <s-option value="title_asc">Title (A-Z)</s-option>
-              </s-select>
-            </s-box>
-          </s-stack>
-
-          {/* Active summary & reset */}
-          <s-stack direction="inline" justifyContent="space-between" alignItems="center">
-            <s-text color="subdued">
-              Showing {filteredQRCodes.length} of {qrCodes.length} QR code{qrCodes.length === 1 ? "" : "s"}
-              {selectedHandles.length > 0 && ` (${selectedHandles.length} selected)`}
-            </s-text>
-
-            <s-stack direction="inline" gap="small-200">
-              {(searchQuery || destinationFilter !== "all" || discountFilter !== "all" || sortBy !== "newest") && (
-                <s-button onClick={clearFilters} variant="tertiary">
-                  Clear filters
-                </s-button>
-              )}
-              <s-button
-                onClick={handleDownloadZip}
-                disabled={filteredQRCodes.length === 0 || isExporting}
-              >
-                {isExporting ? "Exporting..." : `Download ZIP (${selectedHandles.length > 0 ? selectedHandles.length : "All"})`}
-              </s-button>
-              <s-button
-                onClick={() => setIsPrintModalOpen(true)}
-                disabled={filteredQRCodes.length === 0}
-              >
-                Print Stickers ({selectedHandles.length > 0 ? selectedHandles.length : "All"})
-              </s-button>
-            </s-stack>
-          </s-stack>
-        </s-stack>
-      </s-section>
-      {/* [END Filters & Search Card] */}
-
-      {/* [START Table / Filtered Empty] */}
-      {filteredQRCodes.length === 0 ? (
-        <s-section>
-          <s-stack gap="base" alignItems="center" paddingBlock="large-400">
-            <s-heading>No QR codes found</s-heading>
-            <s-paragraph>Try adjusting your search or filter options to find what you are looking for.</s-paragraph>
-            <s-button onClick={clearFilters}>Reset all filters</s-button>
-          </s-stack>
-        </s-section>
-      ) : (
-        <s-section padding="none" accessibilityLabel="QRCode table">
-          <s-table>
-            <s-table-header-row>
-              <s-table-header style={{ width: "40px" }}>
-                <input
-                  type="checkbox"
-                  aria-label="Select all QR codes"
-                  checked={isAllSelected}
-                  onChange={toggleSelectAll}
-                  style={{ cursor: "pointer", width: "16px", height: "16px" }}
-                />
-              </s-table-header>
-              <s-table-header listSlot="primary">Title</s-table-header>
-              <s-table-header>Product</s-table-header>
-              <s-table-header>Destination & Discount</s-table-header>
-              <s-table-header>Date created</s-table-header>
-              <s-table-header>Scans</s-table-header>
-            </s-table-header-row>
-            <s-table-body>
-              {filteredQRCodes.map((qrCode) => {
-                const isSelected = selectedHandles.includes(qrCode.handle);
-                return (
-                  <s-table-row id={qrCode.handle} key={qrCode.handle}>
-                    <s-table-cell>
-                      <input
-                        type="checkbox"
-                        aria-label={`Select ${qrCode.title}`}
-                        checked={isSelected}
-                        onChange={() => toggleSelect(qrCode.handle)}
-                        style={{ cursor: "pointer", width: "16px", height: "16px" }}
-                      />
-                    </s-table-cell>
-                    <s-table-cell>
-                      <s-stack direction="inline" gap="small" alignItems="center">
-                        <s-clickable
-                          href={`/app/qrcodes/${qrCode.handle}`}
-                          accessibilityLabel={`Go to QR code ${qrCode.title}`}
-                          border="base"
-                          borderRadius="base"
-                          overflow="hidden"
-                          inlineSize="32px"
-                          blockSize="32px"
-                        >
-                          {qrCode.image ? (
-                            <s-image objectFit="cover" src={qrCode.image}></s-image>
-                          ) : (
-                            <s-icon size="large" type="image" />
-                          )}
-                        </s-clickable>
-                        <s-link href={`/app/qrcodes/${qrCode.handle}`}>
-                          <strong>{truncate(qrCode.title, { length: 28 })}</strong>
-                        </s-link>
-                      </s-stack>
-                    </s-table-cell>
-                    <s-table-cell>
-                      {qrCode.productDeleted ? (
-                        <s-badge icon="alert-diamond" tone="critical">
-                          Product has been deleted
-                        </s-badge>
-                      ) : (
-                        truncate(qrCode.productTitle || "—", { length: 25 })
-                      )}
-                    </s-table-cell>
-                    <s-table-cell>
-                      <s-stack direction="inline" gap="small-200" alignItems="center">
-                        <s-badge tone={qrCode.destination === "cart" ? "success" : "info"}>
-                          {qrCode.destination === "cart" ? "Cart Checkout" : "Product Page"}
-                        </s-badge>
-                        {qrCode.discountCode && (
-                          <s-badge tone="attention">
-                            🏷️ {qrCode.discountCode}
-                          </s-badge>
-                        )}
-                      </s-stack>
-                    </s-table-cell>
-                    <s-table-cell>{new Date(qrCode.createdAt).toLocaleDateString()}</s-table-cell>
-                    <s-table-cell>
-                      <strong>{qrCode.scans}</strong>
-                    </s-table-cell>
-                  </s-table-row>
+          {/* Destination Dropdown */}
+          <div className="select-wrapper">
+            <select
+              aria-label="Filter by destination"
+              value={destinationFilter}
+              onChange={(e) => {
+                setDestinationFilter(e.target.value);
+                setActiveTab(
+                  e.target.value === "cart"
+                    ? "cart"
+                    : e.target.value === "product"
+                    ? "product"
+                    : "all"
                 );
-              })}
-            </s-table-body>
-          </s-table>
-        </s-section>
-      )}
-      {/* [END Table] */}
+              }}
+            >
+              <option value="all">Destination: All</option>
+              <option value="cart">Cart / Checkout</option>
+              <option value="product">Product Page</option>
+            </select>
+            <svg className="select-arrow" viewBox="0 0 20 20">
+              <path d="M5.5 7.5l4.5 4.5 4.5-4.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+          </div>
+
+          {/* Discount Dropdown */}
+          <div className="select-wrapper">
+            <select
+              aria-label="Filter by discount"
+              value={discountFilter}
+              onChange={(e) => {
+                setDiscountFilter(e.target.value);
+                if (e.target.value === "with_discount") setActiveTab("discount");
+              }}
+            >
+              <option value="all">Discount: All</option>
+              <option value="with_discount">With Discount</option>
+              <option value="no_discount">Without Discount</option>
+            </select>
+            <svg className="select-arrow" viewBox="0 0 20 20">
+              <path d="M5.5 7.5l4.5 4.5 4.5-4.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+          </div>
+
+          {/* Sort By Dropdown */}
+          <div className="select-wrapper">
+            <select
+              aria-label="Sort QR codes"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+            >
+              <option value="newest">Sort: Newest First</option>
+              <option value="oldest">Sort: Oldest First</option>
+              <option value="scans_desc">Sort: Most Scans</option>
+              <option value="title_asc">Sort: Title (A-Z)</option>
+            </select>
+            <svg className="select-arrow" viewBox="0 0 20 20">
+              <path d="M5.5 7.5l4.5 4.5 4.5-4.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+          </div>
+        </div>
+
+        {/* Action & Summary Bar */}
+        <div className="action-summary-row">
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+            {selectedHandles.length > 0 ? (
+              <span style={{ fontWeight: "600", color: "#008060" }}>
+                ✓ {selectedHandles.length} of {filteredQRCodes.length} selected
+              </span>
+            ) : (
+              <span style={{ color: "#616161" }}>
+                Showing <strong>{filteredQRCodes.length}</strong> of <strong>{qrCodes.length}</strong> QR code{qrCodes.length === 1 ? "" : "s"}
+              </span>
+            )}
+
+            {selectedHandles.length > 0 && (
+              <button
+                type="button"
+                className="btn-polaris-tertiary"
+                onClick={() => setSelectedHandles([])}
+              >
+                Deselect all
+              </button>
+            )}
+
+            {hasActiveFilters && (
+              <button
+                type="button"
+                className="btn-polaris-tertiary"
+                onClick={clearFilters}
+              >
+                Clear all filters
+              </button>
+            )}
+          </div>
+
+          {/* Action Buttons */}
+          <div className="action-buttons-group">
+            <button
+              type="button"
+              className="btn-polaris-secondary"
+              onClick={handleDownloadZip}
+              disabled={filteredQRCodes.length === 0 || isExporting}
+            >
+              <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M10.75 3a.75.75 0 0 0-1.5 0v8.69L6.53 8.97a.75.75 0 0 0-1.06 1.06l4 4a.75.75 0 0 0 1.06 0l4-4a.75.75 0 1 0-1.06-1.06l-2.72 2.72V3z" />
+                <path d="M3.5 15.25a.75.75 0 0 0 0 1.5h13a.75.75 0 0 0 0-1.5h-13z" />
+              </svg>
+              {isExporting ? "Exporting..." : `Download ZIP (${selectedHandles.length > 0 ? selectedHandles.length : "All"})`}
+            </button>
+
+            <button
+              type="button"
+              className="btn-polaris-secondary"
+              onClick={() => setIsPrintModalOpen(true)}
+              disabled={filteredQRCodes.length === 0}
+            >
+              <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M5 4.5a1.5 1.5 0 0 1 1.5-1.5h7a1.5 1.5 0 0 1 1.5 1.5V6h-10V4.5zm11 3h-12a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h1v-2.5a1.5 1.5 0 0 1 1.5-1.5h7a1.5 1.5 0 0 1 1.5 1.5V15.5h1a2 2 0 0 0 2-2v-4a2 2 0 0 0-2-2zm-3 5.5v3.5H7V13h6z" />
+              </svg>
+              Print Stickers ({selectedHandles.length > 0 ? selectedHandles.length : "All"})
+            </button>
+          </div>
+        </div>
+
+        {/* Data Table or Empty Result */}
+        {filteredQRCodes.length === 0 ? (
+          <div style={{ padding: "48px 24px", textAlign: "center" }}>
+            <h3 style={{ fontSize: "16px", fontWeight: "600", marginBottom: "8px", color: "#202223" }}>
+              No QR codes found
+            </h3>
+            <p style={{ fontSize: "14px", color: "#616161", marginBottom: "16px" }}>
+              Try adjusting your search terms or filters to find what you are looking for.
+            </p>
+            <button
+              type="button"
+              className="btn-polaris-secondary"
+              onClick={clearFilters}
+            >
+              Reset all filters
+            </button>
+          </div>
+        ) : (
+          <div style={{ overflowX: "auto" }}>
+            <table className="polaris-table">
+              <thead>
+                <tr>
+                  <th style={{ width: "40px", textAlign: "center" }}>
+                    <input
+                      type="checkbox"
+                      aria-label="Select all QR codes"
+                      className="table-checkbox"
+                      checked={isAllSelected}
+                      onChange={toggleSelectAll}
+                    />
+                  </th>
+                  <th>QR Code & Title</th>
+                  <th>Linked Product</th>
+                  <th>Destination</th>
+                  <th>Discount Code</th>
+                  <th>Date Created</th>
+                  <th style={{ textAlign: "center" }}>Scans</th>
+                  <th style={{ textAlign: "right" }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredQRCodes.map((qrCode) => {
+                  const isSelected = selectedHandles.includes(qrCode.handle);
+                  return (
+                    <tr key={qrCode.handle} className={isSelected ? "selected" : ""}>
+                      <td style={{ textAlign: "center" }}>
+                        <input
+                          type="checkbox"
+                          aria-label={`Select ${qrCode.title}`}
+                          className="table-checkbox"
+                          checked={isSelected}
+                          onChange={() => toggleSelect(qrCode.handle)}
+                        />
+                      </td>
+
+                      {/* QR Thumbnail & Title */}
+                      <td>
+                        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                          <Link
+                            to={`/app/qrcodes/${qrCode.handle}`}
+                            className="qr-thumb-box"
+                            title="Click to view/edit QR Code"
+                          >
+                            {qrCode.image ? (
+                              <img
+                                src={qrCode.image}
+                                alt={qrCode.title}
+                                style={{ width: "36px", height: "36px", objectFit: "contain" }}
+                              />
+                            ) : (
+                              <span style={{ fontSize: "10px", color: "#8c9196" }}>QR</span>
+                            )}
+                          </Link>
+                          <div>
+                            <Link to={`/app/qrcodes/${qrCode.handle}`} className="qr-title-link">
+                              {truncate(qrCode.title || "Untitled QR Code", { length: 32 })}
+                            </Link>
+                            <div style={{ fontSize: "11px", color: "#8c9196", marginTop: "2px" }}>
+                              {qrCode.handle}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Product */}
+                      <td>
+                        {qrCode.productDeleted ? (
+                          <span className="badge-pill badge-critical">
+                            ⚠️ Product Deleted
+                          </span>
+                        ) : (
+                          <span title={qrCode.productTitle} style={{ fontWeight: "500" }}>
+                            {truncate(qrCode.productTitle || "—", { length: 28 })}
+                          </span>
+                        )}
+                      </td>
+
+                      {/* Destination */}
+                      <td>
+                        {qrCode.destination === "cart" ? (
+                          <span className="badge-pill badge-green">
+                            🛒 Cart Checkout
+                          </span>
+                        ) : (
+                          <span className="badge-pill badge-blue">
+                            📦 Product Page
+                          </span>
+                        )}
+                      </td>
+
+                      {/* Discount Code */}
+                      <td>
+                        {qrCode.discountCode && qrCode.discountCode.trim() ? (
+                          <span className="badge-pill badge-amber">
+                            🏷️ {qrCode.discountCode}
+                          </span>
+                        ) : (
+                          <span style={{ color: "#8c9196", paddingLeft: "8px" }}>—</span>
+                        )}
+                      </td>
+
+                      {/* Date */}
+                      <td style={{ color: "#616161", fontSize: "12px", whiteSpace: "nowrap" }}>
+                        {new Date(qrCode.createdAt).toLocaleDateString()}
+                      </td>
+
+                      {/* Scans */}
+                      <td style={{ textAlign: "center" }}>
+                        <span className="scans-count">{qrCode.scans}</span>
+                      </td>
+
+                      {/* Quick Actions */}
+                      <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                        <div style={{ display: "inline-flex", gap: "6px", alignItems: "center" }}>
+                          <button
+                            type="button"
+                            className="btn-polaris-secondary"
+                            style={{ height: "28px", padding: "0 8px", fontSize: "12px" }}
+                            onClick={() => handleDownloadSinglePng(qrCode)}
+                            title="Download single PNG"
+                          >
+                            PNG
+                          </button>
+                          <Link
+                            to={`/app/qrcodes/${qrCode.handle}`}
+                            className="btn-polaris-secondary"
+                            style={{ height: "28px", padding: "0 8px", fontSize: "12px", textDecoration: "none" }}
+                          >
+                            Edit
+                          </Link>
+                          <a
+                            href={`/qrcodes/${qrCode.handle}/scan?shop=${shop}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="btn-polaris-secondary"
+                            style={{ height: "28px", padding: "0 8px", fontSize: "12px", textDecoration: "none", color: "#008060" }}
+                            title="Test scan destination link"
+                          >
+                            Test ↗
+                          </a>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+      {/* [END Polaris Custom Table & Filter Card] */}
 
       {/* [START Printable Sticker Modal / Sheet] */}
       {isPrintModalOpen && (
@@ -428,7 +664,7 @@ export default function Index() {
               }}
             >
               <div>
-                <h3 style={{ margin: 0, fontSize: "18px", fontWeight: "600" }}>
+                <h3 style={{ margin: 0, fontSize: "18px", fontWeight: "600", color: "#202223" }}>
                   Printable Sticker Sheet ({activeSelectedItems.length} Stickers)
                 </h3>
                 <p style={{ margin: "4px 0 0 0", fontSize: "13px", color: "#616161" }}>
@@ -596,8 +832,348 @@ export default function Index() {
         </div>
       )}
 
-      {/* Embedded CSS for Print Styling */}
+      {/* Embedded CSS for Polaris Styling & Print */}
       <style>{`
+        /* Card container */
+        .polaris-card {
+          background: #ffffff;
+          border: 1px solid #e1e3e5;
+          border-radius: 12px;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+          overflow: hidden;
+          margin-top: 16px;
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        /* Tabs */
+        .polaris-tabs-bar {
+          display: flex;
+          align-items: center;
+          border-bottom: 1px solid #e1e3e5;
+          padding: 0 12px;
+          background: #ffffff;
+          gap: 4px;
+          overflow-x: auto;
+        }
+
+        .polaris-tab-item {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 12px 14px;
+          font-size: 13px;
+          font-weight: 500;
+          color: #616161;
+          background: none;
+          border: none;
+          border-bottom: 2.5px solid transparent;
+          cursor: pointer;
+          white-space: nowrap;
+          transition: all 0.15s ease;
+        }
+
+        .polaris-tab-item:hover {
+          color: #202223;
+        }
+
+        .polaris-tab-item.active {
+          color: #202223;
+          font-weight: 600;
+          border-bottom-color: #008060;
+        }
+
+        .tab-badge {
+          background: #f1f2f4;
+          color: #616161;
+          padding: 2px 7px;
+          border-radius: 10px;
+          font-size: 11px;
+          font-weight: 600;
+        }
+
+        .polaris-tab-item.active .tab-badge {
+          background: #e4f8ed;
+          color: #0f6f43;
+        }
+
+        /* Filter controls row */
+        .filter-controls-row {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 12px;
+          align-items: center;
+          padding: 14px 16px;
+          border-bottom: 1px solid #e1e3e5;
+          background: #ffffff;
+        }
+
+        .search-input-wrapper {
+          flex: 1 1 260px;
+          min-width: 220px;
+          position: relative;
+          display: flex;
+          align-items: center;
+        }
+
+        .search-icon {
+          position: absolute;
+          left: 12px;
+          width: 16px;
+          height: 16px;
+          fill: #616161;
+          pointer-events: none;
+        }
+
+        .search-input {
+          width: 100%;
+          height: 36px;
+          padding: 0 32px 0 36px;
+          font-size: 13px;
+          color: #202223;
+          background: #ffffff;
+          border: 1px solid #c9cccf;
+          border-radius: 8px;
+          outline: none;
+          box-sizing: border-box;
+          transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .search-input:focus {
+          border-color: #008060;
+          box-shadow: 0 0 0 1px #008060;
+        }
+
+        .search-clear-btn {
+          position: absolute;
+          right: 10px;
+          background: none;
+          border: none;
+          color: #8c9196;
+          font-size: 14px;
+          cursor: pointer;
+          padding: 2px;
+          line-height: 1;
+        }
+
+        .select-wrapper {
+          position: relative;
+          display: flex;
+          align-items: center;
+        }
+
+        .select-wrapper select {
+          appearance: none;
+          -webkit-appearance: none;
+          height: 36px;
+          padding: 0 30px 0 12px;
+          font-size: 13px;
+          font-weight: 500;
+          color: #202223;
+          background: #ffffff;
+          border: 1px solid #c9cccf;
+          border-radius: 8px;
+          cursor: pointer;
+          outline: none;
+          box-sizing: border-box;
+          transition: border-color 0.15s ease, background-color 0.15s ease;
+        }
+
+        .select-wrapper select:hover {
+          background-color: #f9fafb;
+        }
+
+        .select-wrapper select:focus {
+          border-color: #008060;
+          box-shadow: 0 0 0 1px #008060;
+        }
+
+        .select-arrow {
+          position: absolute;
+          right: 10px;
+          pointer-events: none;
+          width: 12px;
+          height: 12px;
+          color: #616161;
+        }
+
+        /* Action & summary row */
+        .action-summary-row {
+          display: flex;
+          flex-wrap: wrap;
+          justify-content: space-between;
+          align-items: center;
+          gap: 12px;
+          padding: 10px 16px;
+          background: #fafbfb;
+          border-bottom: 1px solid #e1e3e5;
+          font-size: 13px;
+        }
+
+        .action-buttons-group {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          flex-wrap: wrap;
+        }
+
+        .btn-polaris-secondary {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          height: 32px;
+          padding: 0 12px;
+          background: #ffffff;
+          border: 1px solid #c9cccf;
+          border-radius: 6px;
+          font-size: 13px;
+          font-weight: 500;
+          color: #202223;
+          cursor: pointer;
+          box-sizing: border-box;
+          transition: background-color 0.15s ease, border-color 0.15s ease;
+        }
+
+        .btn-polaris-secondary:hover:not(:disabled) {
+          background: #f6f6f7;
+          border-color: #b0b4b8;
+        }
+
+        .btn-polaris-secondary:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+
+        .btn-polaris-tertiary {
+          background: none;
+          border: none;
+          color: #2c6ecb;
+          font-size: 13px;
+          font-weight: 500;
+          cursor: pointer;
+          padding: 4px 6px;
+          text-decoration: underline;
+        }
+
+        .btn-polaris-tertiary:hover {
+          color: #1f4f89;
+        }
+
+        /* Badges */
+        .badge-pill {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          padding: 3px 8px;
+          border-radius: 12px;
+          font-size: 12px;
+          font-weight: 500;
+          line-height: 1.2;
+        }
+
+        .badge-green {
+          background: #e4f8ed;
+          color: #0f6f43;
+          border: 1px solid #b7ecd0;
+        }
+
+        .badge-blue {
+          background: #eaf4fd;
+          color: #0e5b99;
+          border: 1px solid #b8def9;
+        }
+
+        .badge-amber {
+          background: #fef4e6;
+          color: #8c5b05;
+          border: 1px solid #f9dcab;
+        }
+
+        .badge-critical {
+          background: #fedfe0;
+          color: #8e1f0b;
+          border: 1px solid #f9b8b8;
+        }
+
+        /* Table */
+        .polaris-table {
+          width: 100%;
+          border-collapse: collapse;
+          text-align: left;
+        }
+
+        .polaris-table th {
+          background: #f7f8f9;
+          font-size: 12px;
+          font-weight: 600;
+          color: #5c5f62;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          padding: 10px 16px;
+          border-bottom: 1px solid #e1e3e5;
+          white-space: nowrap;
+        }
+
+        .polaris-table td {
+          padding: 12px 16px;
+          border-bottom: 1px solid #e1e3e5;
+          font-size: 13px;
+          color: #202223;
+          vertical-align: middle;
+        }
+
+        .polaris-table tr:hover td {
+          background: #f9fafb;
+        }
+
+        .polaris-table tr.selected td {
+          background: #f1f7f5;
+        }
+
+        .table-checkbox {
+          width: 16px;
+          height: 16px;
+          cursor: pointer;
+          accent-color: #008060;
+          vertical-align: middle;
+        }
+
+        .qr-thumb-box {
+          width: 40px;
+          height: 40px;
+          border-radius: 6px;
+          border: 1px solid #e1e3e5;
+          overflow: hidden;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: #ffffff;
+          flex-shrink: 0;
+        }
+
+        .qr-title-link {
+          color: #202223;
+          font-weight: 600;
+          font-size: 14px;
+          text-decoration: none;
+        }
+
+        .qr-title-link:hover {
+          color: #008060;
+          text-decoration: underline;
+        }
+
+        .scans-count {
+          display: inline-block;
+          min-width: 28px;
+          padding: 2px 8px;
+          background: #f1f2f4;
+          border-radius: 12px;
+          font-weight: 700;
+          font-size: 12px;
+          text-align: center;
+          color: #202223;
+        }
+
         @media print {
           /* Hide everything in the body except the printable labels modal container */
           body * {
