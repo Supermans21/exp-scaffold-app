@@ -29,6 +29,7 @@ export async function loader({ request, params }) {
     return {
       destination: "product",
       title: "",
+      discountCode: "",
       shop: session.shop,
     };
   }
@@ -137,6 +138,7 @@ export default function QRCodeForm() {
       productId: formState.productId || "",
       productVariantId: formState.productVariantId || "",
       destination: formState.destination,
+      discountCode: formState.discountCode || "",
     };
 
     submit(data, { method: "post" });
@@ -243,6 +245,18 @@ export default function QRCodeForm() {
                 ) : null}
               </s-stack>
               {/* [END destination] */}
+              {/* [START discount] */}
+              <s-text-field
+                label="Discount code (optional)"
+                details="Automatically applies this discount code to checkout when scanned"
+                autoComplete="off"
+                name="discountCode"
+                value={formState.discountCode || ""}
+                onInput={(e) =>
+                  setFormState({ ...formState, discountCode: e.target.value })
+                }
+              ></s-text-field>
+              {/* [END discount] */}
               {/* [START product] */}
               <s-stack gap="small-400">
                 <s-stack direction="inline" gap="small-100" justifyContent="space-between">

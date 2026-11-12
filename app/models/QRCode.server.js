@@ -35,6 +35,7 @@ export async function getQRCode(handle, graphql, shop) {
             }
           }
           destination: field(key: "destination") { jsonValue }
+          discountCode: field(key: "discount_code") { jsonValue }
           scans: field(key: "scans") { jsonValue }
         }
       }
@@ -88,6 +89,7 @@ export async function getQRCodes(graphql, shop) {
               }
             }
             destination: field(key: "destination") { jsonValue }
+            discountCode: field(key: "discount_code") { jsonValue }
             scans: field(key: "scans") { jsonValue }
           }
         }
@@ -119,6 +121,7 @@ async function transformMetaobject(metaobject, shop) {
     productHandle: product?.handle,
     productVariantLegacyId: variant?.legacyResourceId,
     destination: metaobject.destination?.jsonValue,
+    discountCode: metaobject.discountCode?.jsonValue || "",
     scans: metaobject.scans?.jsonValue ?? 0,
     createdAt: metaobject.updatedAt,
     productDeleted: productId && !product,
@@ -146,13 +149,19 @@ export async function getQRCodeImage(handle, shop) {
 
 // [START get-destination]
 export function getDestinationUrl(qrCode, shop) {
+  let path = "";
   if (qrCode.destination === "product") {
-    return `https://${shop}/products/${qrCode.productHandle}?variant=${qrCode.productVariantLegacyId}`;
+    path = `/products/${qrCode.productHandle}?variant=${qrCode.productVariantLegacyId}`;
+  } else {
+    invariant(qrCode.productVariantLegacyId, "Unrecognised product variant ID");
+    path = `/cart/${qrCode.productVariantLegacyId}:1`;
   }
 
-  invariant(qrCode.productVariantLegacyId, "Unrecognised product variant ID");
+  if (qrCode.discountCode && qrCode.discountCode.trim()) {
+    return `https://${shop}/discount/${encodeURIComponent(qrCode.discountCode.trim())}?redirect=${encodeURIComponent(path)}`;
+  }
 
-  return `https://${shop}/cart/${qrCode.productVariantLegacyId}:1`;
+  return `https://${shop}${path}`;
 }
 // [END get-destination]
 
@@ -178,6 +187,7 @@ export async function saveQRCode(handle, data, graphql) {
               ? [{ key: "product_variant", value: data.productVariantId }]
               : []),
             { key: "destination", value: data.destination },
+            { key: "discount_code", value: data.discountCode ? data.discountCode.trim() : "" },
           ],
         },
       },

@@ -46,6 +46,10 @@ name = "Destination"
   [metaobjects.app.qrcode.fields.destination.validations]
   choices = [ "product", "cart" ]
 
+[metaobjects.app.qrcode.fields.discount_code]
+type = "single_line_text_field"
+name = "Discount Code"
+
 [metaobjects.app.qrcode.fields.scans]
 type = "number_integer"
 name = "Scans"

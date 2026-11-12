@@ -35,6 +35,7 @@ export const loader = async ({ request, params }) => {
             }
           }
           destination: field(key: "destination") { jsonValue }
+          discountCode: field(key: "discount_code") { jsonValue }
           scans: field(key: "scans") { jsonValue }
         }
       }
@@ -59,6 +60,7 @@ export const loader = async ({ request, params }) => {
   // [START redirect]
   const qrCode = {
     destination: metaobject.destination?.jsonValue,
+    discountCode: metaobject.discountCode?.jsonValue || "",
     productHandle: metaobject.product?.reference?.handle,
     productVariantLegacyId: metaobject.productVariant?.reference?.legacyResourceId,
   };
