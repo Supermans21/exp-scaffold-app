@@ -2,12 +2,11 @@
 
 client_id = "a5549e02ffc6871bffe0b5ee575ed261"
 name = "oman-gege"
-application_url = "https://shopify.dev/apps/default-app-home"
+application_url = "https://qr-code-generator-two-silk.vercel.app"
 embedded = true
 
 [build]
 automatically_update_urls_on_dev = true
-include_config_on_deploy = true
 
 [webhooks]
 api_version = "2027-01"
@@ -17,7 +16,7 @@ api_version = "2027-01"
 scopes = "write_metaobject_definitions,write_metaobjects,write_products"
 
 [auth]
-redirect_urls = [ "https://shopify.dev/apps/default-app-home/api/auth" ]
+redirect_urls = [ "https://qr-code-generator-two-silk.vercel.app/auth/callback" ]
 
 [metaobjects.app.qrcode]
 name = "QR Code"
