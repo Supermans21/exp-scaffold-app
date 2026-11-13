@@ -138,10 +138,12 @@ async function transformMetaobject(metaobject, shop) {
 
 // [START get-qrcode-image]
 export async function getQRCodeImage(handle, shop) {
-  const url = new URL(
-    `/qrcodes/${handle}/scan`,
-    process.env.SHOPIFY_APP_URL,
-  );
+  const appUrl =
+    process.env.SHOPIFY_APP_URL ||
+    (process.env.VERCEL_PROJECT_PRODUCTION_URL
+      ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+      : "");
+  const url = new URL(`/qrcodes/${handle}/scan`, appUrl);
   url.searchParams.set("shop", shop);
   return qrcode.toDataURL(url.href);
 }
