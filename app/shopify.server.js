@@ -23,7 +23,10 @@ const shopify = shopifyApp({
   scopes: process.env.SCOPES?.split(","),
   appUrl,
   authPathPrefix: "/auth",
-  sessionStorage: new PrismaSessionStorage(prisma),
+  sessionStorage: new PrismaSessionStorage(prisma, {
+    connectionRetries: 5,
+    connectionRetryIntervalMs: 1000,
+  }),
   distribution: AppDistribution.AppStore,
   restResources,
   webhooks: {
