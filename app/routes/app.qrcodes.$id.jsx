@@ -35,13 +35,24 @@ export async function loader({ request, params }) {
   }
 
   const qrCode = await getQRCode(params.id, admin.graphql, session.shop);
+  if (!qrCode) {
+    throw new Response("QR Code not found", { status: 404 });
+  }
   return { ...qrCode, shop: session.shop };
   // [END data]
 }
 
+function formatActionError(error, fallbackMessage) {
+  const rawMessage = error instanceof Error ? error.message : fallbackMessage;
+  if (rawMessage.includes("No metaobject definition exists")) {
+    return `${rawMessage}. Run \`shopify app deploy\` to sync the $app:qrcode metaobject definition to Shopify.`;
+  }
+  return rawMessage;
+}
+
 // [START action]
 export async function action({ request, params }) {
-  const { session, admin, redirect } = await authenticate.admin(request);
+  const { admin, redirect } = await authenticate.admin(request);
 
   /** @type {any} */
   const formDataObj = {
@@ -49,8 +60,16 @@ export async function action({ request, params }) {
   };
 
   if (formDataObj.action === "delete") {
-    await deleteQRCode(formDataObj.metaobjectId, admin.graphql);
-    return redirect("/app");
+    try {
+      await deleteQRCode(formDataObj.metaobjectId, admin.graphql);
+      return redirect("/app");
+    } catch (error) {
+      if (error instanceof Response) throw error;
+      return data(
+        { errors: { form: formatActionError(error, "Failed to delete QR code.") } },
+        { status: 422 },
+      );
+    }
   }
 
   const errors = validateQRCode(formDataObj);
@@ -62,9 +81,16 @@ export async function action({ request, params }) {
   const handle =
     params.id === "new" ? generateHandle(formDataObj.title) : params.id;
 
-  const metaobject = await saveQRCode(handle, formDataObj, admin.graphql);
-
-  return redirect(`/app/qrcodes/${metaobject.handle}`);
+  try {
+    const metaobject = await saveQRCode(handle, formDataObj, admin.graphql);
+    return redirect(`/app/qrcodes/${metaobject.handle}`);
+  } catch (error) {
+    if (error instanceof Response) throw error;
+    return data(
+      { errors: { form: formatActionError(error, "Failed to save QR code.") } },
+      { status: 422 },
+    );
+  }
 }
 // [END action]
 
@@ -196,6 +222,11 @@ export default function QRCodeForm() {
           </s-link>
           {initialFormState.handle &&
             <s-button slot="secondary-actions" onClick={handleDelete}>Delete</s-button>}
+          {errors.form ? (
+            <s-banner heading="Unable to save QR code" tone="critical">
+              {errors.form}
+            </s-banner>
+          ) : null}
           <s-section heading="QR Code information">
             <s-stack gap="base">
               {/* [START title] */}

@@ -5,6 +5,9 @@ import JSZip from "jszip";
 
 import { authenticate } from "../shopify.server";
 import { getQRCodes } from "../models/QRCode.server";
+import indexStylesUrl from "../styles/app-index.css?url";
+
+export const links = () => [{ rel: "stylesheet", href: indexStylesUrl }];
 
 // [START loader]
 export async function loader({ request }) {
@@ -55,6 +58,20 @@ function truncate(str, { length = 25 } = {}) {
   if (!str) return "";
   if (str.length <= length) return str;
   return str.slice(0, length) + "…";
+}
+
+const UTC_DATE_FORMATTER = new Intl.DateTimeFormat("en-US", {
+  year: "numeric",
+  month: "short",
+  day: "numeric",
+  timeZone: "UTC",
+});
+
+function formatCreatedDate(dateString) {
+  if (!dateString) return "—";
+  const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) return "—";
+  return UTC_DATE_FORMATTER.format(date);
 }
 
 export default function Index() {
@@ -571,7 +588,7 @@ export default function Index() {
 
                       {/* Date */}
                       <td style={{ color: "#616161", fontSize: "12px", whiteSpace: "nowrap" }}>
-                        {new Date(qrCode.createdAt).toLocaleDateString()}
+                        {formatCreatedDate(qrCode.createdAt)}
                       </td>
 
                       {/* Scans */}
@@ -832,392 +849,6 @@ export default function Index() {
         </div>
       )}
 
-      {/* Embedded CSS for Polaris Styling & Print */}
-      <style>{`
-        /* Card container */
-        .polaris-card {
-          background: #ffffff;
-          border: 1px solid #e1e3e5;
-          border-radius: 12px;
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-          overflow: hidden;
-          margin-top: 16px;
-          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-        }
-
-        /* Tabs */
-        .polaris-tabs-bar {
-          display: flex;
-          align-items: center;
-          border-bottom: 1px solid #e1e3e5;
-          padding: 0 12px;
-          background: #ffffff;
-          gap: 4px;
-          overflow-x: auto;
-        }
-
-        .polaris-tab-item {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          padding: 12px 14px;
-          font-size: 13px;
-          font-weight: 500;
-          color: #616161;
-          background: none;
-          border: none;
-          border-bottom: 2.5px solid transparent;
-          cursor: pointer;
-          white-space: nowrap;
-          transition: all 0.15s ease;
-        }
-
-        .polaris-tab-item:hover {
-          color: #202223;
-        }
-
-        .polaris-tab-item.active {
-          color: #202223;
-          font-weight: 600;
-          border-bottom-color: #008060;
-        }
-
-        .tab-badge {
-          background: #f1f2f4;
-          color: #616161;
-          padding: 2px 7px;
-          border-radius: 10px;
-          font-size: 11px;
-          font-weight: 600;
-        }
-
-        .polaris-tab-item.active .tab-badge {
-          background: #e4f8ed;
-          color: #0f6f43;
-        }
-
-        /* Filter controls row */
-        .filter-controls-row {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 12px;
-          align-items: center;
-          padding: 14px 16px;
-          border-bottom: 1px solid #e1e3e5;
-          background: #ffffff;
-        }
-
-        .search-input-wrapper {
-          flex: 1 1 260px;
-          min-width: 220px;
-          position: relative;
-          display: flex;
-          align-items: center;
-        }
-
-        .search-icon {
-          position: absolute;
-          left: 12px;
-          width: 16px;
-          height: 16px;
-          fill: #616161;
-          pointer-events: none;
-        }
-
-        .search-input {
-          width: 100%;
-          height: 36px;
-          padding: 0 32px 0 36px;
-          font-size: 13px;
-          color: #202223;
-          background: #ffffff;
-          border: 1px solid #c9cccf;
-          border-radius: 8px;
-          outline: none;
-          box-sizing: border-box;
-          transition: border-color 0.15s ease, box-shadow 0.15s ease;
-        }
-
-        .search-input:focus {
-          border-color: #008060;
-          box-shadow: 0 0 0 1px #008060;
-        }
-
-        .search-clear-btn {
-          position: absolute;
-          right: 10px;
-          background: none;
-          border: none;
-          color: #8c9196;
-          font-size: 14px;
-          cursor: pointer;
-          padding: 2px;
-          line-height: 1;
-        }
-
-        .select-wrapper {
-          position: relative;
-          display: flex;
-          align-items: center;
-        }
-
-        .select-wrapper select {
-          appearance: none;
-          -webkit-appearance: none;
-          height: 36px;
-          padding: 0 30px 0 12px;
-          font-size: 13px;
-          font-weight: 500;
-          color: #202223;
-          background: #ffffff;
-          border: 1px solid #c9cccf;
-          border-radius: 8px;
-          cursor: pointer;
-          outline: none;
-          box-sizing: border-box;
-          transition: border-color 0.15s ease, background-color 0.15s ease;
-        }
-
-        .select-wrapper select:hover {
-          background-color: #f9fafb;
-        }
-
-        .select-wrapper select:focus {
-          border-color: #008060;
-          box-shadow: 0 0 0 1px #008060;
-        }
-
-        .select-arrow {
-          position: absolute;
-          right: 10px;
-          pointer-events: none;
-          width: 12px;
-          height: 12px;
-          color: #616161;
-        }
-
-        /* Action & summary row */
-        .action-summary-row {
-          display: flex;
-          flex-wrap: wrap;
-          justify-content: space-between;
-          align-items: center;
-          gap: 12px;
-          padding: 10px 16px;
-          background: #fafbfb;
-          border-bottom: 1px solid #e1e3e5;
-          font-size: 13px;
-        }
-
-        .action-buttons-group {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          flex-wrap: wrap;
-        }
-
-        .btn-polaris-secondary {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          height: 32px;
-          padding: 0 12px;
-          background: #ffffff;
-          border: 1px solid #c9cccf;
-          border-radius: 6px;
-          font-size: 13px;
-          font-weight: 500;
-          color: #202223;
-          cursor: pointer;
-          box-sizing: border-box;
-          transition: background-color 0.15s ease, border-color 0.15s ease;
-        }
-
-        .btn-polaris-secondary:hover:not(:disabled) {
-          background: #f6f6f7;
-          border-color: #b0b4b8;
-        }
-
-        .btn-polaris-secondary:disabled {
-          opacity: 0.5;
-          cursor: not-allowed;
-        }
-
-        .btn-polaris-tertiary {
-          background: none;
-          border: none;
-          color: #2c6ecb;
-          font-size: 13px;
-          font-weight: 500;
-          cursor: pointer;
-          padding: 4px 6px;
-          text-decoration: underline;
-        }
-
-        .btn-polaris-tertiary:hover {
-          color: #1f4f89;
-        }
-
-        /* Badges */
-        .badge-pill {
-          display: inline-flex;
-          align-items: center;
-          gap: 4px;
-          padding: 3px 8px;
-          border-radius: 12px;
-          font-size: 12px;
-          font-weight: 500;
-          line-height: 1.2;
-        }
-
-        .badge-green {
-          background: #e4f8ed;
-          color: #0f6f43;
-          border: 1px solid #b7ecd0;
-        }
-
-        .badge-blue {
-          background: #eaf4fd;
-          color: #0e5b99;
-          border: 1px solid #b8def9;
-        }
-
-        .badge-amber {
-          background: #fef4e6;
-          color: #8c5b05;
-          border: 1px solid #f9dcab;
-        }
-
-        .badge-critical {
-          background: #fedfe0;
-          color: #8e1f0b;
-          border: 1px solid #f9b8b8;
-        }
-
-        /* Table */
-        .polaris-table {
-          width: 100%;
-          border-collapse: collapse;
-          text-align: left;
-        }
-
-        .polaris-table th {
-          background: #f7f8f9;
-          font-size: 12px;
-          font-weight: 600;
-          color: #5c5f62;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-          padding: 10px 16px;
-          border-bottom: 1px solid #e1e3e5;
-          white-space: nowrap;
-        }
-
-        .polaris-table td {
-          padding: 12px 16px;
-          border-bottom: 1px solid #e1e3e5;
-          font-size: 13px;
-          color: #202223;
-          vertical-align: middle;
-        }
-
-        .polaris-table tr:hover td {
-          background: #f9fafb;
-        }
-
-        .polaris-table tr.selected td {
-          background: #f1f7f5;
-        }
-
-        .table-checkbox {
-          width: 16px;
-          height: 16px;
-          cursor: pointer;
-          accent-color: #008060;
-          vertical-align: middle;
-        }
-
-        .qr-thumb-box {
-          width: 40px;
-          height: 40px;
-          border-radius: 6px;
-          border: 1px solid #e1e3e5;
-          overflow: hidden;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: #ffffff;
-          flex-shrink: 0;
-        }
-
-        .qr-title-link {
-          color: #202223;
-          font-weight: 600;
-          font-size: 14px;
-          text-decoration: none;
-        }
-
-        .qr-title-link:hover {
-          color: #008060;
-          text-decoration: underline;
-        }
-
-        .scans-count {
-          display: inline-block;
-          min-width: 28px;
-          padding: 2px 8px;
-          background: #f1f2f4;
-          border-radius: 12px;
-          font-weight: 700;
-          font-size: 12px;
-          text-align: center;
-          color: #202223;
-        }
-
-        @media print {
-          /* Hide everything in the body except the printable labels modal container */
-          body * {
-            visibility: hidden !important;
-          }
-          .no-print {
-            display: none !important;
-          }
-          .print-modal-overlay {
-            position: static !important;
-            width: 100% !important;
-            height: auto !important;
-            background: none !important;
-            padding: 0 !important;
-          }
-          .print-modal-overlay > div {
-            box-shadow: none !important;
-            width: 100% !important;
-            max-width: 100% !important;
-            max-height: none !important;
-          }
-          #printable-labels, #printable-labels * {
-            visibility: visible !important;
-          }
-          #printable-labels {
-            position: absolute !important;
-            left: 0 !important;
-            top: 0 !important;
-            width: 100% !important;
-            display: grid !important;
-            grid-template-columns: repeat(3, 1fr) !important;
-            gap: 12mm !important;
-            padding: 10mm !important;
-            background: #ffffff !important;
-          }
-          .label-sticker-card {
-            border: 1px dashed #999999 !important;
-            box-shadow: none !important;
-            break-inside: avoid !important;
-            page-break-inside: avoid !important;
-            padding: 12px !important;
-          }
-        }
-      `}</style>
       {/* [END Printable Sticker Modal] */}
     </s-page>
   );
