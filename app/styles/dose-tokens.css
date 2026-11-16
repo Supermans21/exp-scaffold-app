@@ -1,0 +1,99 @@
+:root {
+  color-scheme: light;
+  --space-3xs: 2px;
+  --space-2xs: 4px;
+  --space-xs: 8px;
+  --space-sm: 12px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 40px;
+  --space-2xl: 64px;
+  --space-3xl: 96px;
+  --space-4xl: 144px;
+
+  --text-xs: 0.8125rem;
+  --text-sm: 0.875rem;
+  --text-md: 1rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.5625rem;
+  --text-2xl: 1.953rem;
+  --text-3xl: 2.441rem;
+  --text-display-s: clamp(2rem, 3.6vw + 0.5rem, 3.25rem);
+  --text-display: clamp(2.35rem, 3.4vw + 0.85rem, 3.85rem);
+  --text-section: clamp(1.85rem, 2.2vw + 0.9rem, 3rem);
+  --text-title: clamp(1.1875rem, 0.75vw + 0.85rem, 1.5rem);
+  --text-lead: clamp(1.0625rem, 0.35vw + 0.95rem, 1.25rem);
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-micro: 120ms;
+  --dur-short: 220ms;
+  --dur-long: 420ms;
+
+  --container: 1360px;
+  --gutter: 64px;
+  --gap-columns: 32px;
+  --section-gap-s: 144px;
+  --section-gap: 176px;
+  --section-gap-l: 200px;
+
+  --z-base: 1;
+  --z-raised: 10;
+  --z-dropdown: 100;
+  --z-sticky: 200;
+  --z-sticky-nav: 300;
+  --z-modal: 400;
+  --z-toast: 500;
+  --z-tooltip: 600;
+
+  --color-paper: oklch(97.8% 0.008 158);
+  --color-paper-2: oklch(95.6% 0.018 160);
+  --color-paper-3: oklch(92.4% 0.032 160);
+  --color-paper-sheet: oklch(99.3% 0.004 160);
+  --color-ink: oklch(21% 0.025 170);
+  --color-ink-2: oklch(31% 0.02 170);
+  --color-ink-soft: oklch(38% 0.024 168);
+  --color-muted: oklch(49% 0.024 165);
+  --color-rule: oklch(86.5% 0.022 140);
+  --color-rule-ink: oklch(33% 0.022 168);
+  --color-accent: oklch(46% 0.125 160);
+  --color-accent-deep: oklch(38% 0.11 162);
+  --color-accent-soft: oklch(88% 0.08 160);
+  --color-accent-ink: oklch(99% 0.006 160);
+  --color-focus: oklch(45% 0.14 160);
+  --color-error: oklch(48% 0.175 27);
+  --color-error-soft: oklch(95% 0.035 27);
+  --color-success: oklch(46% 0.12 155);
+
+  --p-wed: oklch(91.5% 0.064 98);
+  --p-thu: oklch(86.5% 0.075 160);
+  --p-fri: oklch(87% 0.048 210);
+  --surface-plastic-thu: linear-gradient(180deg, color-mix(in oklab, var(--glint) 45%, transparent), transparent 24%), color-mix(in oklab, var(--p-thu) 58%, transparent);
+  --surface-plastic-wed: linear-gradient(180deg, color-mix(in oklab, var(--glint) 45%, transparent), transparent 24%), color-mix(in oklab, var(--p-wed) 58%, transparent);
+  --surface-plastic-fri: linear-gradient(180deg, color-mix(in oklab, var(--glint) 45%, transparent), transparent 24%), color-mix(in oklab, var(--p-fri) 58%, transparent);
+  --surface-daylight: radial-gradient(85% 75% at 78% 12%, var(--light), transparent 68%);
+  --shadow-plastic: inset 0 1.5px 0 var(--glint), inset 0 -20px 30px -24px color-mix(in oklab, var(--p-thu) 45%, var(--color-ink)), 0 18px 40px -28px color-mix(in oklab, var(--color-accent-deep) 45%, transparent);
+  --surface-stamp-soft: color-mix(in oklab, var(--color-accent-soft) 55%, var(--color-paper-sheet));
+  --light: oklch(99.4% 0.016 84);
+  --glint: oklch(99.6% 0.004 90);
+  --selection-bg: oklch(84% 0.09 160);
+
+  --font-display: "Schibsted Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "Schibsted Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-outlier: "DM Mono", ui-monospace, monospace;
+
+  --radius-card: 14px;
+  --radius-input: 10px;
+  --radius-pill: 999px;
+  --rule-hair: 1px;
+
+  --shadow-card: 0 1px 2px oklch(30% 0.03 165 / 0.08), 0 18px 36px -22px oklch(40% 0.08 165 / 0.28);
+  --shadow-lift: 0 2px 4px oklch(30% 0.03 165 / 0.10), 8px 18px 28px -14px oklch(36% 0.06 165 / 0.28), 16px 32px 52px -28px oklch(40% 0.08 165 / 0.24);
+  --shadow-inset-bevel: inset 0 1px 0 var(--glint);
+  --shadow-btn-secondary: inset 0 1px 0 var(--glint), 0 0 0 1px var(--color-rule), 0 3px 0 var(--color-rule);
+  --shadow-btn-primary: inset 0 1px 0 oklch(62% 0.12 160 / 0.45), 0 0 0 1px var(--color-accent-deep), 0 3px 0 var(--color-accent-deep);
+
+  --tracking-display: -0.03em;
+  --display-weight: 700;
+}

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useLoaderData, Link } from "react-router";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import JSZip from "jszip";
@@ -7,7 +7,13 @@ import { authenticate } from "../shopify.server";
 import { getQRCodes } from "../models/QRCode.server";
 import indexStylesUrl from "../styles/app-index.css?url";
 
-export const links = () => [{ rel: "stylesheet", href: indexStylesUrl }];
+export const links = () => [
+  {
+    rel: "stylesheet",
+    href: "https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Schibsted+Grotesk:wght@400;500;600;700&display=swap",
+  },
+  { rel: "stylesheet", href: indexStylesUrl },
+];
 
 // [START loader]
 export async function loader({ request }) {
@@ -67,10 +73,61 @@ const UTC_DATE_FORMATTER = new Intl.DateTimeFormat("en-US", {
   timeZone: "UTC",
 });
 
+const SVG_ATTRS = {
+  width: 14,
+  height: 14,
+  viewBox: "0 0 20 20",
+  fill: "none",
+  stroke: "currentColor",
+  strokeWidth: "1.75",
+  strokeLinecap: "round",
+  strokeLinejoin: "round",
+  style: { flexShrink: 0 },
+};
+
+const APP_ICONS = {
+  tag: () => (
+    <svg aria-hidden="true" {...SVG_ATTRS}>
+      <path d="M3.5 10.5V4.5a1 1 0 0 1 1-1h6l6.2 6.2a1.2 1.2 0 0 1 0 1.7l-5.3 5.3a1.2 1.2 0 0 1-1.7 0L3.5 10.5Z" />
+      <circle cx="7" cy="7" r="1" fill="currentColor" stroke="none" />
+    </svg>
+  ),
+  cart: () => (
+    <svg aria-hidden="true" {...SVG_ATTRS}>
+      <circle cx="8" cy="16" r="1.3" />
+      <circle cx="15" cy="16" r="1.3" />
+      <path d="M2.5 3.5h2.2l1.8 9.2h9l1.8-6.2H5.6" />
+    </svg>
+  ),
+  box: () => (
+    <svg aria-hidden="true" {...SVG_ATTRS}>
+      <path d="M10 2.5 16.5 6v8L10 17.5 3.5 14V6L10 2.5Z" />
+      <path d="m3.5 6 6.5 3.5L16.5 6M10 9.5v8" />
+    </svg>
+  ),
+  alert: () => (
+    <svg aria-hidden="true" {...SVG_ATTRS}>
+      <path d="M10 3.2 17.2 16H2.8L10 3.2Z" />
+      <path d="M10 8v4M10 14.2v.1" />
+    </svg>
+  ),
+  printer: () => (
+    <svg aria-hidden="true" {...SVG_ATTRS}>
+      <path d="M5.5 6.5V3.5h9v3M5.5 14H4a1.5 1.5 0 0 1-1.5-1.5V8.5A1.5 1.5 0 0 1 4 7h12a1.5 1.5 0 0 1 1.5 1.5v4A1.5 1.5 0 0 1 16 14h-1.5" />
+      <rect x="5.5" y="11.5" width="9" height="5" rx="0.8" />
+    </svg>
+  ),
+  download: () => (
+    <svg aria-hidden="true" {...SVG_ATTRS}>
+      <path d="M10 3.5v8.5M6.5 8.5 10 12l3.5-3.5M3.5 16h13" />
+    </svg>
+  ),
+};
+
 function formatCreatedDate(dateString) {
-  if (!dateString) return "—";
+  if (!dateString) return "None";
   const date = new Date(dateString);
-  if (Number.isNaN(date.getTime())) return "—";
+  if (Number.isNaN(date.getTime())) return "None";
   return UTC_DATE_FORMATTER.format(date);
 }
 
@@ -88,6 +145,17 @@ export default function Index() {
   const [selectedHandles, setSelectedHandles] = useState([]);
   const [isExporting, setIsExporting] = useState(false);
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
+
+  useEffect(() => {
+    if (!isPrintModalOpen) return undefined;
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setIsPrintModalOpen(false);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [isPrintModalOpen]);
 
   // Quick tab counts
   const tabCounts = useMemo(() => {
@@ -301,7 +369,8 @@ export default function Index() {
             className={`polaris-tab-item ${activeTab === "discount" ? "active" : ""}`}
             onClick={() => handleTabChange("discount")}
           >
-            🏷️ With Discount
+            {APP_ICONS.tag()}
+            With Discount
             <span className="tab-badge">{tabCounts.discount}</span>
           </button>
         </div>
@@ -324,6 +393,7 @@ export default function Index() {
             <input
               type="text"
               className="search-input"
+              aria-label="Search QR codes"
               placeholder="Search by title, product or discount..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -333,9 +403,9 @@ export default function Index() {
                 type="button"
                 className="search-clear-btn"
                 onClick={() => setSearchQuery("")}
-                title="Clear search"
+                aria-label="Clear search"
               >
-                ✕
+                ×
               </button>
             )}
           </div>
@@ -360,7 +430,7 @@ export default function Index() {
               <option value="cart">Cart / Checkout</option>
               <option value="product">Product Page</option>
             </select>
-            <svg className="select-arrow" viewBox="0 0 20 20">
+            <svg className="select-arrow" viewBox="0 0 20 20" aria-hidden="true">
               <path d="M5.5 7.5l4.5 4.5 4.5-4.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
             </svg>
           </div>
@@ -379,7 +449,7 @@ export default function Index() {
               <option value="with_discount">With Discount</option>
               <option value="no_discount">Without Discount</option>
             </select>
-            <svg className="select-arrow" viewBox="0 0 20 20">
+            <svg className="select-arrow" viewBox="0 0 20 20" aria-hidden="true">
               <path d="M5.5 7.5l4.5 4.5 4.5-4.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
             </svg>
           </div>
@@ -396,7 +466,7 @@ export default function Index() {
               <option value="scans_desc">Sort: Most Scans</option>
               <option value="title_asc">Sort: Title (A-Z)</option>
             </select>
-            <svg className="select-arrow" viewBox="0 0 20 20">
+            <svg className="select-arrow" viewBox="0 0 20 20" aria-hidden="true">
               <path d="M5.5 7.5l4.5 4.5 4.5-4.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
             </svg>
           </div>
@@ -404,13 +474,13 @@ export default function Index() {
 
         {/* Action & Summary Bar */}
         <div className="action-summary-row">
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+          <div className="action-summary-group">
             {selectedHandles.length > 0 ? (
-              <span style={{ fontWeight: "600", color: "#008060" }}>
-                ✓ {selectedHandles.length} of {filteredQRCodes.length} selected
+              <span className="qr-selected-summary">
+                {selectedHandles.length} of {filteredQRCodes.length} selected
               </span>
             ) : (
-              <span style={{ color: "#616161" }}>
+              <span className="qr-table-count">
                 Showing <strong>{filteredQRCodes.length}</strong> of <strong>{qrCodes.length}</strong> QR code{qrCodes.length === 1 ? "" : "s"}
               </span>
             )}
@@ -444,10 +514,7 @@ export default function Index() {
               onClick={handleDownloadZip}
               disabled={filteredQRCodes.length === 0 || isExporting}
             >
-              <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor">
-                <path d="M10.75 3a.75.75 0 0 0-1.5 0v8.69L6.53 8.97a.75.75 0 0 0-1.06 1.06l4 4a.75.75 0 0 0 1.06 0l4-4a.75.75 0 1 0-1.06-1.06l-2.72 2.72V3z" />
-                <path d="M3.5 15.25a.75.75 0 0 0 0 1.5h13a.75.75 0 0 0 0-1.5h-13z" />
-              </svg>
+              {APP_ICONS.download()}
               {isExporting ? "Exporting..." : `Download ZIP (${selectedHandles.length > 0 ? selectedHandles.length : "All"})`}
             </button>
 
@@ -457,9 +524,7 @@ export default function Index() {
               onClick={() => setIsPrintModalOpen(true)}
               disabled={filteredQRCodes.length === 0}
             >
-              <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M5 4.5a1.5 1.5 0 0 1 1.5-1.5h7a1.5 1.5 0 0 1 1.5 1.5V6h-10V4.5zm11 3h-12a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h1v-2.5a1.5 1.5 0 0 1 1.5-1.5h7a1.5 1.5 0 0 1 1.5 1.5V15.5h1a2 2 0 0 0 2-2v-4a2 2 0 0 0-2-2zm-3 5.5v3.5H7V13h6z" />
-              </svg>
+              {APP_ICONS.printer()}
               Print Stickers ({selectedHandles.length > 0 ? selectedHandles.length : "All"})
             </button>
           </div>
@@ -467,11 +532,11 @@ export default function Index() {
 
         {/* Data Table or Empty Result */}
         {filteredQRCodes.length === 0 ? (
-          <div style={{ padding: "48px 24px", textAlign: "center" }}>
-            <h3 style={{ fontSize: "16px", fontWeight: "600", marginBottom: "8px", color: "#202223" }}>
+          <div className="qr-empty-state">
+            <h3 className="qr-empty-title">
               No QR codes found
             </h3>
-            <p style={{ fontSize: "14px", color: "#616161", marginBottom: "16px" }}>
+            <p className="qr-empty-copy">
               Try adjusting your search terms or filters to find what you are looking for.
             </p>
             <button
@@ -483,11 +548,11 @@ export default function Index() {
             </button>
           </div>
         ) : (
-          <div style={{ overflowX: "auto" }}>
+          <div className="qr-table-scroll">
             <table className="polaris-table">
               <thead>
                 <tr>
-                  <th style={{ width: "40px", textAlign: "center" }}>
+                  <th className="qr-col-checkbox">
                     <input
                       type="checkbox"
                       aria-label="Select all QR codes"
@@ -496,13 +561,13 @@ export default function Index() {
                       onChange={toggleSelectAll}
                     />
                   </th>
-                  <th>QR Code & Title</th>
+                  <th>QR Code &amp; Title</th>
                   <th>Linked Product</th>
                   <th>Destination</th>
                   <th>Discount Code</th>
                   <th>Date Created</th>
-                  <th style={{ textAlign: "center" }}>Scans</th>
-                  <th style={{ textAlign: "right" }}>Actions</th>
+                  <th className="qr-cell-center">Scans</th>
+                  <th className="qr-cell-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -510,7 +575,7 @@ export default function Index() {
                   const isSelected = selectedHandles.includes(qrCode.handle);
                   return (
                     <tr key={qrCode.handle} className={isSelected ? "selected" : ""}>
-                      <td style={{ textAlign: "center" }}>
+                      <td className="qr-cell-center">
                         <input
                           type="checkbox"
                           aria-label={`Select ${qrCode.title}`}
@@ -522,27 +587,29 @@ export default function Index() {
 
                       {/* QR Thumbnail & Title */}
                       <td>
-                        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                        <div className="qr-title-cell">
                           <Link
                             to={`/app/qrcodes/${qrCode.handle}`}
                             className="qr-thumb-box"
-                            title="Click to view/edit QR Code"
+                            aria-label={`Edit ${qrCode.title || "QR Code"}`}
                           >
                             {qrCode.image ? (
                               <img
                                 src={qrCode.image}
                                 alt={qrCode.title}
-                                style={{ width: "36px", height: "36px", objectFit: "contain" }}
+                                width="36"
+                                height="36"
+                                className="qr-thumb-img"
                               />
                             ) : (
-                              <span style={{ fontSize: "10px", color: "#8c9196" }}>QR</span>
+                              <span className="qr-thumb-fallback">QR</span>
                             )}
                           </Link>
                           <div>
                             <Link to={`/app/qrcodes/${qrCode.handle}`} className="qr-title-link">
                               {truncate(qrCode.title || "Untitled QR Code", { length: 32 })}
                             </Link>
-                            <div style={{ fontSize: "11px", color: "#8c9196", marginTop: "2px" }}>
+                            <div className="qr-handle-text">
                               {qrCode.handle}
                             </div>
                           </div>
@@ -553,11 +620,12 @@ export default function Index() {
                       <td>
                         {qrCode.productDeleted ? (
                           <span className="badge-pill badge-critical">
-                            ⚠️ Product Deleted
+                            {APP_ICONS.alert()}
+                            Product Deleted
                           </span>
                         ) : (
-                          <span title={qrCode.productTitle} style={{ fontWeight: "500" }}>
-                            {truncate(qrCode.productTitle || "—", { length: 28 })}
+                          <span title={qrCode.productTitle} className="qr-product-name">
+                            {truncate(qrCode.productTitle || "None", { length: 28 })}
                           </span>
                         )}
                       </td>
@@ -566,11 +634,13 @@ export default function Index() {
                       <td>
                         {qrCode.destination === "cart" ? (
                           <span className="badge-pill badge-green">
-                            🛒 Cart Checkout
+                            {APP_ICONS.cart()}
+                            Cart Checkout
                           </span>
                         ) : (
                           <span className="badge-pill badge-blue">
-                            📦 Product Page
+                            {APP_ICONS.box()}
+                            Product Page
                           </span>
                         )}
                       </td>
@@ -579,30 +649,30 @@ export default function Index() {
                       <td>
                         {qrCode.discountCode && qrCode.discountCode.trim() ? (
                           <span className="badge-pill badge-amber">
-                            🏷️ {qrCode.discountCode}
+                            {APP_ICONS.tag()}
+                            {qrCode.discountCode}
                           </span>
                         ) : (
-                          <span style={{ color: "#8c9196", paddingLeft: "8px" }}>—</span>
+                          <span className="qr-muted-none">None</span>
                         )}
                       </td>
 
                       {/* Date */}
-                      <td style={{ color: "#616161", fontSize: "12px", whiteSpace: "nowrap" }}>
+                      <td className="qr-cell-date">
                         {formatCreatedDate(qrCode.createdAt)}
                       </td>
 
                       {/* Scans */}
-                      <td style={{ textAlign: "center" }}>
+                      <td className="qr-cell-center">
                         <span className="scans-count">{qrCode.scans}</span>
                       </td>
 
                       {/* Quick Actions */}
-                      <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
-                        <div style={{ display: "inline-flex", gap: "6px", alignItems: "center" }}>
+                      <td className="qr-cell-right">
+                        <div className="qr-row-actions">
                           <button
                             type="button"
-                            className="btn-polaris-secondary"
-                            style={{ height: "28px", padding: "0 8px", fontSize: "12px" }}
+                            className="btn-polaris-secondary btn-row-action"
                             onClick={() => handleDownloadSinglePng(qrCode)}
                             title="Download single PNG"
                           >
@@ -610,8 +680,7 @@ export default function Index() {
                           </button>
                           <Link
                             to={`/app/qrcodes/${qrCode.handle}`}
-                            className="btn-polaris-secondary"
-                            style={{ height: "28px", padding: "0 8px", fontSize: "12px", textDecoration: "none" }}
+                            className="btn-polaris-secondary btn-row-action"
                           >
                             Edit
                           </Link>
@@ -619,11 +688,10 @@ export default function Index() {
                             href={`/qrcodes/${qrCode.handle}/scan?shop=${shop}`}
                             target="_blank"
                             rel="noreferrer"
-                            className="btn-polaris-secondary"
-                            style={{ height: "28px", padding: "0 8px", fontSize: "12px", textDecoration: "none", color: "#008060" }}
+                            className="btn-polaris-secondary btn-row-action btn-row-action--accent"
                             title="Test scan destination link"
                           >
-                            Test ↗
+                            Test
                           </a>
                         </div>
                       </td>
@@ -641,83 +709,40 @@ export default function Index() {
       {isPrintModalOpen && (
         <div
           className="print-modal-overlay"
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            width: "100vw",
-            height: "100vh",
-            backgroundColor: "rgba(0, 0, 0, 0.6)",
-            zIndex: 9999,
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            padding: "20px",
-          }}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="print-modal-title"
         >
-          <div
-            style={{
-              backgroundColor: "#ffffff",
-              borderRadius: "12px",
-              width: "900px",
-              maxWidth: "95vw",
-              maxHeight: "90vh",
-              display: "flex",
-              flexDirection: "column",
-              boxShadow: "0 10px 25px rgba(0,0,0,0.3)",
-              overflow: "hidden",
-            }}
-          >
+          <button
+            type="button"
+            className="print-modal-backdrop"
+            aria-label="Close printable sticker modal"
+            onClick={() => setIsPrintModalOpen(false)}
+          />
+          <div className="print-modal-shell">
             {/* Modal Header */}
-            <div
-              className="no-print"
-              style={{
-                padding: "16px 24px",
-                borderBottom: "1px solid #e1e3e5",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                background: "#f7f8f9",
-              }}
-            >
+            <div className="no-print print-modal-header">
               <div>
-                <h3 style={{ margin: 0, fontSize: "18px", fontWeight: "600", color: "#202223" }}>
+                <h3 id="print-modal-title" className="print-modal-title">
                   Printable Sticker Sheet ({activeSelectedItems.length} Stickers)
                 </h3>
-                <p style={{ margin: "4px 0 0 0", fontSize: "13px", color: "#616161" }}>
-                  Click &quot;Print Now&quot; to print standard labels (grid format suitable for stickers/tags).
+                <p className="print-modal-subtitle">
+                  Click &quot;Print Now&quot; to print standard labels (grid format suitable for stickers or tags).
                 </p>
               </div>
-              <div style={{ display: "flex", gap: "10px" }}>
+              <div className="print-modal-actions">
                 <button
                   type="button"
                   onClick={handlePrint}
-                  style={{
-                    backgroundColor: "#008060",
-                    color: "#ffffff",
-                    border: "none",
-                    padding: "8px 18px",
-                    borderRadius: "6px",
-                    fontWeight: "600",
-                    cursor: "pointer",
-                    fontSize: "14px",
-                  }}
+                  className="btn-print-primary"
                 >
-                  🖨️ Print Now
+                  {APP_ICONS.printer()}
+                  Print Now
                 </button>
                 <button
                   type="button"
                   onClick={() => setIsPrintModalOpen(false)}
-                  style={{
-                    backgroundColor: "#e4e5e7",
-                    color: "#202223",
-                    border: "none",
-                    padding: "8px 14px",
-                    borderRadius: "6px",
-                    fontWeight: "500",
-                    cursor: "pointer",
-                    fontSize: "14px",
-                  }}
+                  className="btn-print-close"
                 >
                   Close
                 </button>
@@ -725,61 +750,15 @@ export default function Index() {
             </div>
 
             {/* Sticker Grid Container */}
-            <div
-              style={{
-                padding: "24px",
-                overflowY: "auto",
-                backgroundColor: "#f1f2f4",
-                flex: 1,
-              }}
-            >
-              <div
-                id="printable-labels"
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
-                  gap: "16px",
-                }}
-              >
+            <div className="print-modal-body">
+              <div id="printable-labels" className="print-labels-grid">
                 {activeSelectedItems.map((item) => (
-                  <div
-                    key={item.handle}
-                    className="label-sticker-card"
-                    style={{
-                      border: "1.5px dashed #b0b4b8",
-                      borderRadius: "10px",
-                      padding: "14px",
-                      textAlign: "center",
-                      backgroundColor: "#ffffff",
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      breakInside: "avoid",
-                      pageBreakInside: "avoid",
-                    }}
-                  >
-                    <div style={{ width: "100%", marginBottom: "8px" }}>
-                      <div
-                        style={{
-                          fontSize: "14px",
-                          fontWeight: "700",
-                          color: "#202223",
-                          lineHeight: "1.2",
-                          marginBottom: "4px",
-                        }}
-                      >
+                  <div key={item.handle} className="sticker-sheet-tile">
+                    <div className="sticker-tile-head">
+                      <div className="sticker-tile-title">
                         {truncate(item.title || "Product", { length: 24 })}
                       </div>
-                      <div
-                        style={{
-                          fontSize: "12px",
-                          color: "#6d7175",
-                          whiteSpace: "nowrap",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                        }}
-                      >
+                      <div className="sticker-tile-product">
                         {item.productTitle || "Shopify Product"}
                       </div>
                     </div>
@@ -787,57 +766,25 @@ export default function Index() {
                     {item.image ? (
                       <img
                         src={item.image}
+                        width="140"
+                        height="140"
                         alt={item.title}
-                        style={{
-                          width: "140px",
-                          height: "140px",
-                          objectFit: "contain",
-                          margin: "6px 0",
-                        }}
+                        className="sticker-tile-qr"
                       />
                     ) : (
-                      <div
-                        style={{
-                          width: "140px",
-                          height: "140px",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          backgroundColor: "#f6f6f7",
-                          color: "#8c9196",
-                          fontSize: "12px",
-                        }}
-                      >
+                      <div className="sticker-tile-qr-empty">
                         No QR Image
                       </div>
                     )}
 
-                    <div style={{ width: "100%", marginTop: "6px" }}>
+                    <div className="sticker-tile-foot">
                       {item.discountCode ? (
-                        <div
-                          style={{
-                            display: "inline-block",
-                            backgroundColor: "#ffd200",
-                            color: "#303030",
-                            fontWeight: "700",
-                            fontSize: "11px",
-                            padding: "2px 8px",
-                            borderRadius: "4px",
-                            marginBottom: "4px",
-                          }}
-                        >
-                          🏷️ CODE: {item.discountCode}
+                        <div className="sticker-discount-tag">
+                          {APP_ICONS.tag()}
+                          Code: {item.discountCode}
                         </div>
                       ) : null}
-                      <div
-                        style={{
-                          fontSize: "11px",
-                          fontWeight: "600",
-                          color: "#008060",
-                          letterSpacing: "0.5px",
-                          textTransform: "uppercase",
-                        }}
-                      >
+                      <div className="sticker-scan-hint">
                         {item.destination === "cart" ? "Scan to Buy Directly" : "Scan for Details"}
                       </div>
                     </div>
