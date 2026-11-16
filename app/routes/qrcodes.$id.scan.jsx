@@ -5,6 +5,7 @@ import { unauthenticated } from "../shopify.server";
 import {
   getDestinationUrl,
   incrementQRCodeScans,
+  METAOBJECT_TYPE,
 } from "../models/QRCode.server";
 
 export const loader = async ({ request, params }) => {
@@ -42,7 +43,7 @@ export const loader = async ({ request, params }) => {
     `,
     {
       variables: {
-        handle: { type: "$app:qrcode", handle: params.id },
+        handle: { type: METAOBJECT_TYPE, handle: params.id },
       },
     },
   );

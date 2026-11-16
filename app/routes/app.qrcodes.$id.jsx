@@ -45,7 +45,7 @@ export async function loader({ request, params }) {
 function formatActionError(error, fallbackMessage) {
   const rawMessage = error instanceof Error ? error.message : fallbackMessage;
   if (rawMessage.includes("No metaobject definition exists")) {
-    return `${rawMessage}. Run \`shopify app deploy\` to sync the $app:qrcode metaobject definition to Shopify.`;
+    return `${rawMessage}. Run \`shopify app deploy\` to sync the $app:qr_code metaobject definition to Shopify.`;
   }
   return rawMessage;
 }
@@ -181,6 +181,7 @@ export default function QRCodeForm() {
 
   // [START save-bar]
   const saveBarRef = useRef(null);
+  const [isHydrated, setIsHydrated] = useState(false);
 
   function handleReset() {
     setFormState(initialFormState);
@@ -188,6 +189,11 @@ export default function QRCodeForm() {
   }
 
   useEffect(() => {
+    setIsHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isHydrated) return;
     const saveBar = saveBarRef.current;
     if (!saveBar) return;
 
@@ -196,7 +202,7 @@ export default function QRCodeForm() {
     } else {
       saveBar.hide();
     }
-  }, [isDirty]);
+  }, [isDirty, isHydrated]);
 
   useEffect(() => {
     setInitialFormState(qrCode);
@@ -205,10 +211,12 @@ export default function QRCodeForm() {
 
   return (
     <>
-      <ui-save-bar ref={saveBarRef} id="qr-code-form">
-        <button variant="primary" onClick={handleSave}></button>
-        <button onClick={handleReset}></button>
-      </ui-save-bar>
+      {isHydrated ? (
+        <ui-save-bar ref={saveBarRef} id="qr-code-form">
+          <button variant="primary" onClick={handleSave}></button>
+          <button onClick={handleReset}></button>
+        </ui-save-bar>
+      ) : null}
       <form onSubmit={handleSave} onReset={handleReset}>
         {/* [START polaris] */}
         <s-page heading={initialFormState.title || "Create QR code"}>

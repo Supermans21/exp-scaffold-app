@@ -2,7 +2,7 @@ import invariant from "tiny-invariant";
 import { useLoaderData } from "react-router";
 
 import { unauthenticated } from "../shopify.server";
-import { getQRCodeImage } from "../models/QRCode.server";
+import { getQRCodeImage, METAOBJECT_TYPE } from "../models/QRCode.server";
 
 // [START loader]
 export const loader = async ({ request, params }) => {
@@ -24,7 +24,7 @@ export const loader = async ({ request, params }) => {
     `,
     {
       variables: {
-        handle: { type: "$app:qrcode", handle: params.id },
+        handle: { type: METAOBJECT_TYPE, handle: params.id },
       },
     },
   );

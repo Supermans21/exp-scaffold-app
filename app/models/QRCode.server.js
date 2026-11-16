@@ -1,7 +1,7 @@
 import qrcode from "qrcode";
 import invariant from "tiny-invariant";
 
-const METAOBJECT_TYPE = "$app:qrcode";
+export const METAOBJECT_TYPE = "$app:qr_code";
 
 // [START get-qrcode]
 export async function getQRCode(handle, graphql, shop) {
